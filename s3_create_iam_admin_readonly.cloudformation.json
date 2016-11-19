@@ -1,0 +1,194 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Create S3 bucket, an admin S3 IAM group, and a readonly S3 IAM group",
+  "Parameters": {
+    "bucketNameParam": {
+      "Description": "The S3 bucket name",
+      "Type": "String",
+      "Default": "sample-bucket-name",
+      "MinLength": "3",
+      "MaxLength": "50",
+      "AllowedPattern": "^[a-z0-9][a-z0-9.-]*"
+    }
+  },
+  "Outputs": {
+    "S3BucketName": {
+      "Description": "The S3 bucket name",
+      "Value": {
+        "Ref": "S3Bucket"
+      }
+    },
+    "S3AdminIAMGroup": {
+      "Description": "The ARN of the IAM Group for S3 Admin",
+      "Value": {
+        "Ref": "S3AdminIAMGroup"
+      }
+    },
+    "S3ReadOnlyIAMGroup": {
+      "Description": "The ARN of the IAM Group for S3 ReadOnly",
+      "Value": {
+        "Ref": "S3ReadOnlyIAMGroup"
+      }
+    }
+  },
+  "Resources": {
+    "S3AdminIAMGroup":{
+      "Type": "AWS::IAM::Group",
+      "Properties":{
+        "GroupName": "S3AdminIAMGroup"
+      }
+    },
+    "S3AdminPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "S3AdminPolicy",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect":"Allow",
+              "Action":[
+                 "s3:ListAllMyBuckets"
+              ],
+              "Resource":"arn:aws:s3:::*"
+           },
+           {
+              "Effect":"Allow",
+              "Action":[
+                 "s3:ListBucket",
+                 "s3:GetBucketLocation"
+              ],
+              "Resource":{
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::",
+                    {
+                      "Ref": "S3Bucket"
+                    }
+                  ]
+                ]
+              }
+           },
+           {
+              "Effect":"Allow",
+              "Action":[
+                 "s3:PutObject",
+                 "s3:GetObject",
+                 "s3:DeleteObject"
+              ],
+              "Resource":{
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::",
+                    {
+                      "Ref": "S3Bucket"
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+           }
+         ]
+        },
+        "Groups": [
+          {
+            "Ref": "S3AdminIAMGroup"
+          }
+        ]
+      },
+      "DependsOn":["S3Bucket","S3AdminIAMGroup"]
+    },
+    "S3ReadOnlyIAMGroup":{
+      "Type": "AWS::IAM::Group",
+      "Properties":{
+        "GroupName": "S3ReadOnlyIAMGroup"
+      }
+    },
+    "S3ReadOnlyPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "S3ReadOnlyPolicy",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect":"Allow",
+              "Action":[
+                 "s3:ListAllMyBuckets"
+              ],
+              "Resource":"arn:aws:s3:::*"
+           },
+           {
+              "Effect":"Allow",
+              "Action":[
+                 "s3:ListBucket",
+                 "s3:GetBucketLocation"
+              ],
+              "Resource":{
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::",
+                    {
+                      "Ref": "S3Bucket"
+                    }
+                  ]
+                ]
+              }
+           },
+           {
+              "Effect":"Allow",
+              "Action":[
+                 "s3:GetObject"
+              ],
+              "Resource":{
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::",
+                    {
+                      "Ref": "S3Bucket"
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+           }
+         ]
+        },
+        "Groups": [
+          {
+            "Ref": "S3ReadOnlyIAMGroup"
+          }
+        ]
+      },
+      "DependsOn":["S3Bucket","S3ReadOnlyIAMGroup"]
+    },
+    "S3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": {
+          "Fn::Join": [
+            "-",
+            [
+              {
+                "Ref": "AWS::AccountId"
+              },
+              {
+                "Ref": "bucketNameParam"
+              }
+            ]
+          ]
+        },
+        "AccessControl": "Private"
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "26a75348-591d-4378-b062-f78a415d789f"
+        }
+      }
+    }
+  }
+}

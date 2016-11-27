@@ -9,6 +9,14 @@
       "MinLength": "3",
       "MaxLength": "50",
       "AllowedPattern": "^[a-z0-9][a-z0-9.-]*"
+    },
+    "S3TagParam": {
+      "Description": "A sample S3 tag",
+      "Type": "String",
+      "Default": "aS3TagParam",
+      "MinLength": "3",
+      "MaxLength": "50",
+      "AllowedPattern": "^[a-zA-Z0-9][a-zA-Z0-9.-]*"
     }
   },
   "Outputs": {
@@ -24,6 +32,12 @@
         "Ref": "S3AdminIAMGroup"
       }
     },
+    "S3AdminIAMPolicy": {
+      "Description": "The ARN of the IAM Policy for S3 Admin",
+      "Value": {
+        "Ref": "S3AdminPolicy"
+      }
+    },
     "S3ReadOnlyIAMGroup": {
       "Description": "The ARN of the IAM Group for S3 ReadOnly",
       "Value": {
@@ -32,10 +46,32 @@
     }
   },
   "Resources": {
-    "S3AdminIAMGroup":{
+    "S3AdminIAMGroup": {
       "Type": "AWS::IAM::Group",
-      "Properties":{
+      "Properties": {
         "GroupName": "S3AdminIAMGroup"
+      }
+    },
+    "S3AdminIAMRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "s3.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "RoleName": "S3AdminIAMRole"
       }
     },
     "S3AdminPolicy": {
@@ -46,19 +82,19 @@
           "Version": "2012-10-17",
           "Statement": [
             {
-              "Effect":"Allow",
-              "Action":[
-                 "s3:ListAllMyBuckets"
+              "Effect": "Allow",
+              "Action": [
+                "s3:ListAllMyBuckets"
               ],
-              "Resource":"arn:aws:s3:::*"
-           },
-           {
-              "Effect":"Allow",
-              "Action":[
-                 "s3:ListBucket",
-                 "s3:GetBucketLocation"
+              "Resource": "arn:aws:s3:::*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
               ],
-              "Resource":{
+              "Resource": {
                 "Fn::Join": [
                   "",
                   [
@@ -69,15 +105,15 @@
                   ]
                 ]
               }
-           },
-           {
-              "Effect":"Allow",
-              "Action":[
-                 "s3:PutObject",
-                 "s3:GetObject",
-                 "s3:DeleteObject"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:DeleteObject"
               ],
-              "Resource":{
+              "Resource": {
                 "Fn::Join": [
                   "",
                   [
@@ -89,8 +125,33 @@
                   ]
                 ]
               }
-           }
-         ]
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "kms:*",
+                "kms:Describe*",
+                "kms:Enable*",
+                "kms:List*",
+                "kms:Put*",
+                "kms:Update*",
+                "kms:Revoke*",
+                "kms:Disable*",
+                "kms:Get*",
+                "kms:Delete*",
+                "kms:ScheduleKeyDeletion",
+                "kms:CancelKeyDeletion"
+              ],
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "S3Key",
+                    "Arn"
+                  ]
+                }
+              ]
+            }
+          ]
         },
         "Groups": [
           {
@@ -98,12 +159,38 @@
           }
         ]
       },
-      "DependsOn":["S3Bucket","S3AdminIAMGroup"]
+      "DependsOn": [
+        "S3Bucket",
+        "S3AdminIAMGroup",
+        "S3Key"
+      ]
     },
-    "S3ReadOnlyIAMGroup":{
+    "S3ReadOnlyIAMGroup": {
       "Type": "AWS::IAM::Group",
-      "Properties":{
+      "Properties": {
         "GroupName": "S3ReadOnlyIAMGroup"
+      }
+    },
+    "S3ReadOnlyIAMRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "s3.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "RoleName": "S3ReadOnlyIAMRole"
       }
     },
     "S3ReadOnlyPolicy": {
@@ -114,19 +201,19 @@
           "Version": "2012-10-17",
           "Statement": [
             {
-              "Effect":"Allow",
-              "Action":[
-                 "s3:ListAllMyBuckets"
+              "Effect": "Allow",
+              "Action": [
+                "s3:ListAllMyBuckets"
               ],
-              "Resource":"arn:aws:s3:::*"
-           },
-           {
-              "Effect":"Allow",
-              "Action":[
-                 "s3:ListBucket",
-                 "s3:GetBucketLocation"
+              "Resource": "arn:aws:s3:::*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
               ],
-              "Resource":{
+              "Resource": {
                 "Fn::Join": [
                   "",
                   [
@@ -137,13 +224,13 @@
                   ]
                 ]
               }
-           },
-           {
-              "Effect":"Allow",
-              "Action":[
-                 "s3:GetObject"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:GetObject"
               ],
-              "Resource":{
+              "Resource": {
                 "Fn::Join": [
                   "",
                   [
@@ -155,8 +242,23 @@
                   ]
                 ]
               }
-           }
-         ]
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "kms:Encrypt",
+                "kms:Decrypt"
+              ],
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "S3Key",
+                    "Arn"
+                  ]
+                }
+              ]
+            }
+          ]
         },
         "Groups": [
           {
@@ -164,7 +266,67 @@
           }
         ]
       },
-      "DependsOn":["S3Bucket","S3ReadOnlyIAMGroup"]
+      "DependsOn": [
+        "S3Bucket",
+        "S3ReadOnlyIAMGroup",
+        "S3Key"
+      ]
+    },
+    "S3Key": {
+      "Type": "AWS::KMS::Key",
+      "Properties": {
+        "Description": "S3key",
+        "KeyPolicy": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "Allow administration of the key",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": [
+                  {
+                    "Fn::GetAtt": [
+                      "S3AdminIAMRole",
+                      "Arn"
+                    ]
+                  },
+                  {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:aws:iam::",
+                        {
+                          "Ref": "AWS::AccountId"
+                        },
+                        ":root"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              "Action": [
+                "kms:*"
+              ],
+              "Resource": "*"
+            }
+          ]
+        }
+      },
+      "DependsOn": [
+        "S3AdminIAMGroup"
+      ]
+    },
+    "S3KeyAlias": {
+      "Type": "AWS::KMS::Alias",
+      "Properties": {
+        "AliasName": "alias/s3key",
+        "TargetKeyId": {
+          "Ref": "S3Key"
+        }
+      },
+      "DependsOn": [
+        "S3Key"
+      ]
     },
     "S3Bucket": {
       "Type": "AWS::S3::Bucket",
@@ -182,11 +344,79 @@
             ]
           ]
         },
+        "Tags": [
+          {
+            "Key": "S3TagParam",
+            "Value": {
+              "Ref": "S3TagParam"
+            }
+          }
+        ],
         "AccessControl": "Private"
+      }
+    },
+    "S3BucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "S3Bucket"
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": [
+                "s3:PutObject"
+              ],
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::",
+                    {
+                      "Ref": "S3Bucket"
+                    },
+                    "/*"
+                  ]
+                ]
+              },
+              "Condition": {
+                "StringNotEquals": {
+                  "s3:x-amz-server-side-encryption": "aws:kms"
+                }
+              }
+            },
+            {
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": [
+                "s3:PutObject"
+              ],
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::",
+                    {
+                      "Ref": "S3Bucket"
+                    },
+                    "/*"
+                  ]
+                ]
+              },
+              "Condition": {
+                "StringNotEquals": {
+                  "s3:x-amz-server-side-encryption": "AES256"
+                }
+              }
+            }
+          ]
       },
+      "DependsOn": [
+        "S3Bucket"
+      ],
       "Metadata": {
-        "AWS::CloudFormation::Designer": {
-          "id": "26a75348-591d-4378-b062-f78a415d789f"
         }
       }
     }

@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Create S3 bucket, an admin S3 IAM group, and a readonly S3 IAM group",
+  "Description": "Create S3 bucket, an admin S3 IAM group, a readonly S3 IAM group, KMS and enfoced server-side-encryption bucket policy",
   "Parameters": {
     "bucketNameParam": {
       "Description": "The S3 bucket name",
@@ -412,12 +412,13 @@
               }
             }
           ]
+        }
       },
       "DependsOn": [
         "S3Bucket"
       ],
       "Metadata": {
-        }
+        "Comment": "Service side encryption enforement. Either through CLI 'aws s3api --profile s3admin put-object --server-side-encryption aws:kms --ssekms-key-id <s3key-id> --bucket <bucket name> --body s3test.txt --key s3test.encrypted', or in the AWS Console, choose Set Details -> Server Side Encryption."
       }
     }
   }

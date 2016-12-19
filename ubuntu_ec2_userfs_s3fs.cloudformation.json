@@ -277,22 +277,25 @@
         ]
       }
     },
-    "S3BucketPolicy": {
-      "Type": "AWS::S3::BucketPolicy",
-      "DependsOn": [
-        "s3mountGroup"
-      ],
+    "S3Ec2MountPolicy": {
+      "Type": "AWS::IAM::Policy",
       "Properties": {
-        "Bucket": {
-          "Ref": "bucketNameParam"
-        },
+        "PolicyName": "S3Ec2MountPolicy",
         "PolicyDocument": {
-          "Id": "Policy1482110492680",
           "Version": "2012-10-17",
           "Statement": [
             {
-              "Action": "s3:*",
               "Effect": "Allow",
+              "Action": [
+                "s3:ListAllMyBuckets"
+              ],
+              "Resource": "arn:aws:s3:::*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:*"
+              ],
               "Resource": {
                 "Fn::Join": [
                   "",
@@ -303,21 +306,37 @@
                     }
                   ]
                 ]
-              },
-              "Principal": {
-                "AWS": [
-                  {
-                    "Fn::GetAtt": [
-                      "s3mountUser",
-                      "Arn"
-                    ]
-                  }
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:*"
+              ],
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::",
+                    {
+                      "Ref": "bucketNameParam"
+                    },
+                    "/*"
+                  ]
                 ]
               }
             }
           ]
-        }
-      }
+        },
+        "Groups": [
+          {
+            "Ref": "s3mountGroup"
+          }
+        ]
+      },
+      "DependsOn": [
+        "s3mountGroup"
+      ]
     },
     "s3mountUserKey": {
       "Type": "AWS::IAM::AccessKey",
@@ -330,7 +349,7 @@
     },
     "PythonEc2": {
       "Type": "AWS::EC2::Instance",
-      "DependsOn": [ "s3mountUserKey", "S3BucketPolicy" ],
+      "DependsOn": [ "s3mountUserKey", "S3Ec2MountPolicy" ],
       "Properties": {
         "ImageId": {
           "Fn::FindInMap": [

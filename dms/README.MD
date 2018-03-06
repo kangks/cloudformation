@@ -12,7 +12,7 @@
 
 These stacks will create a new VPC, with a S3 bucket for the export, and a DMS task pulling data from the SQL Server
 
-![Architecture diagram](/dms.png)
+![Architecture diagram](/dms/dms.png)
 
 ## Details
 

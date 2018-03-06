@@ -1,0 +1,97 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC for ML-lab
+Metadata: {}
+Parameters:
+  ProjectNameParam:
+    Description: Name of the project to be tagged to the resources
+    Type: String
+    Default: ml-lab
+  SourceVPCIdParam:
+    Description: VPC of the source DB.
+    Type: AWS::EC2::VPC::Id
+  SourceVpcOwnerParam:
+    Description: AWS Owner account ID for the VPC of the source DB.
+    Type: String
+  # Subnet01ZoneParam:
+  #   Type: String
+  #   AllowedValues: !GetAZs
+  #     Ref: 'AWS::Region'
+    # Default: !Join ['', [ !Select [ 0, !GetAZs Ref: 'AWS::Region' ]]]
+  # Subnet02ZoneParam:
+  #   Type: String
+  #   AllowedValues: !GetAZs
+  #     Ref: 'AWS::Region'
+    # Default: !Join ['', [ !Select [ 1, !GetAZs Ref: 'AWS::Region' ]]]
+Mappings: {}
+Outputs:
+  DMSVpcOutput:
+    Description: DMS VPC
+    Value: !Ref mlVpc
+    Export:
+      Name: DMSVpc
+Resources:
+  mlVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.10.0.0/16
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      InstanceTenancy: default
+      Tags:
+      - Key: project
+        Value: !Ref ProjectNameParam
+  mlSGEgress:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "ML-Lab-SG"
+      GroupDescription: Limits security group egress traffic
+      SecurityGroupEgress:
+      - CidrIp: 127.0.0.1/32
+        IpProtocol: "-1"
+      VpcId:
+        Ref: mlVpc
+  mlSubnet01:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: mlVpc
+      CidrBlock: 10.10.1.0/24
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs
+          Ref: 'AWS::Region'
+      Tags:
+      - Key: project
+        Value: !Ref ProjectNameParam
+  mlSubnet02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: mlVpc
+      CidrBlock: 10.10.2.0/24
+      AvailabilityZone: !Select
+        - 1
+        - !GetAZs
+          Ref: 'AWS::Region'
+      Tags:
+      - Key: project
+        Value: !Ref ProjectNameParam
+  mlVPCPeeringConnection:
+    Type: AWS::EC2::VPCPeeringConnection
+    Properties:
+      VpcId: !Ref mlVpc
+      PeerOwnerId: !Ref SourceVpcOwnerParam
+      PeerVpcId: !Ref SourceVPCIdParam
+      Tags:
+      - Key: project
+        Value: !Ref ProjectNameParam
+  S3VPCEndpoint:
+    Type: 'AWS::EC2::VPCEndpoint'
+    Properties:
+      ServiceName: !Join
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .s3
+      VpcId: !Ref SourceVPCIdParam        

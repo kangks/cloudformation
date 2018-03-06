@@ -1,0 +1,75 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: S3 for ML-lab
+Metadata: {}
+Parameters:
+  ProjectNameParam:
+    Description: Name of the project to be tagged to the resources
+    Type: String
+    Default: ml-lab
+  S3BucketNameParam:
+    Description: Name of the s3 bucket name
+    Type: String
+    Default: ml-lab
+Mappings: {}
+Outputs:
+  DBDumpS3BucketNameOutput:
+    Description: S3 bucket Name
+    Value: !Ref DBDumpS3Bucket
+    Export:
+      Name: DBDumpS3BucketName
+Resources:
+  DBDumpS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join ['-', [ !Ref 'AWS::StackName', !Ref 'S3BucketNameParam' ]]
+      Tags:
+      - Key: project
+        Value: !Ref ProjectNameParam
+  DBDumpS3BucketRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: ['sts:AssumeRole']
+          Effect: Allow
+          Principal:
+            Service: [s3.amazonaws.com]
+  DBDumpS3BucketPutPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action: ['s3:ListBucket']
+          Effect: Allow
+          Resource:
+          - !Join ['', ['arn:aws:s3:::', !Ref 'DBDumpS3Bucket']]
+        - Action: ['s3:PutObject']
+          Effect: Allow
+          Resource:
+          - !Join ['', ['arn:aws:s3:::', !Ref 'DBDumpS3Bucket', /*]]
+        - Action: ['s3:GetObjectVersion', 's3:GetObjectVersionAcl']
+          Effect: Allow
+          Resource:
+          - !Join ['', ['arn:aws:s3:::', !Ref 'DBDumpS3Bucket', /*]]
+      PolicyName: DBDumpS3BucketPolicy
+      Roles: [!Ref 'DBDumpS3BucketRole']
+  DBDumpS3BucketGetPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action: ['s3:ListBucket']
+          Effect: Allow
+          Resource:
+          - !Join ['', ['arn:aws:s3:::', !Ref 'DBDumpS3Bucket']]
+        - Action: ['s3:GetObject']
+          Effect: Allow
+          Resource:
+          - !Join ['', ['arn:aws:s3:::', !Ref 'DBDumpS3Bucket', /*]]
+        - Action: ['s3:GetObjectVersion', 's3:GetObjectVersionAcl']
+          Effect: Allow
+          Resource:
+          - !Join ['', ['arn:aws:s3:::', !Ref 'DBDumpS3Bucket', /*]]
+      PolicyName: DBDumpS3BucketPolicy
+      Roles: [!Ref 'DBDumpS3BucketRole']

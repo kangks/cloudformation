@@ -1,0 +1,123 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: DMS for ML-lab
+Metadata: {}
+Parameters:
+  ProjectNameParam:
+    Description: Name of the project to be tagged to the resources
+    Type: String
+    Default: ml-lab
+  SourceDBServerNameParam:
+    Description: Server name of Source DB
+    Type: String
+  SourceDBServerPortParam:
+    Description: Server port of Source DB
+    Type: Number
+  SourceDBLoginParam:
+    Description: Login of Source DB
+    Type: String
+  SourceDBPasswordParam:
+    Description: Password of Source DB
+    Type: String
+  SourceDBDatabaseNameParam:
+    Description: Database name of Source DB
+    Type: String
+  DMSSubnetParam:
+    Description: Subnet ID for the DMS instance, preferably the same subnet as the source DB
+    Type: List<AWS::EC2::Subnet::Id>
+Mappings: {}
+Outputs: {}
+Resources:
+  SQLSourceEndpoint:
+    Type: "AWS::DMS::Endpoint"
+    Properties:
+      EngineName: "sqlserver"
+      EndpointType: "source"
+      Username: !Ref SourceDBLoginParam
+      Password: !Ref SourceDBPasswordParam
+      ServerName: !Ref SourceDBServerNameParam
+      Port: !Ref SourceDBServerPortParam
+      DatabaseName: !Ref SourceDBDatabaseNameParam
+      Tags:
+      - Key: project
+        Value: !Ref ProjectNameParam
+  DMSS3AccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: ['sts:AssumeRole']
+          Effect: Allow
+          Principal:
+            Service: [dms.amazonaws.com]
+  DmsS3BucketPutPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action: ['s3:ListBucket']
+          Effect: Allow
+          Resource:
+          Resource:
+            - !Join ['', ['arn:aws:s3:::', !ImportValue DBDumpS3BucketName]]
+        - Action: ['s3:PutObject']
+          Effect: Allow
+          Resource:
+            - !Join ['', ['arn:aws:s3:::', !ImportValue DBDumpS3BucketName]]
+        - Action: ['s3:GetObjectVersion', 's3:GetObjectVersionAcl']
+          Effect: Allow
+          Resource:
+            - !Join ['', ['arn:aws:s3:::', !ImportValue DBDumpS3BucketName]]
+      PolicyName: DmsS3BucketPutPolicy
+      Roles: [!Ref 'DMSS3AccessRole']
+  S3TargetEndpoint:
+    Type: "AWS::DMS::Endpoint"
+    Properties:
+      EngineName: "s3"
+      EndpointType: "target"
+      S3Settings:
+        ServiceAccessRoleArn: !GetAtt DMSS3AccessRole.Arn
+        BucketName: !ImportValue DBDumpS3BucketName
+      Tags:
+      - Key: project
+        Value: !Ref ProjectNameParam
+  DMSReplicationSubnetGroup:
+    Type: "AWS::DMS::ReplicationSubnetGroup"
+    Properties:
+      ReplicationSubnetGroupDescription: !Join [ "-", [ !Ref 'AWS::StackName', "DMS", "Subnet" ]]
+      SubnetIds: !Ref DMSSubnetParam
+      Tags:
+      - Key: project
+        Value: !Ref ProjectNameParam
+  BasicReplicationInstance:
+    Type: 'AWS::DMS::ReplicationInstance'
+    Properties:
+      ReplicationInstanceClass: dms.t2.small
+      ReplicationSubnetGroupIdentifier: !Ref DMSReplicationSubnetGroup
+      PubliclyAccessible: False
+  SqlserverToS3ReplicationTask:
+    Type: "AWS::DMS::ReplicationTask"
+    Properties:
+      SourceEndpointArn: !Ref SQLSourceEndpoint
+      TargetEndpointArn: !Ref S3TargetEndpoint
+      ReplicationInstanceArn: !Ref BasicReplicationInstance
+      MigrationType: "full-load"
+      TableMappings: "{
+        \"rules\": [
+          {
+            \"rule-type\": \"selection\",
+            \"rule-id\": \"1\",
+            \"rule-name\": \"1\",
+            \"object-locator\": {
+              \"schema-name\": \"%\",
+              \"table-name\": \"%\"
+            },
+            \"rule-action\": \"include\"
+          }
+        ]
+      }"
+      ReplicationTaskSettings: "{
+        \"Logging\": {
+          \"EnableLogging\": true
+        }
+      }"

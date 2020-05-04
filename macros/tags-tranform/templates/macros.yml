@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: >
+  Template that creates Macros
+
+Parameters:
+  prefix:
+    Type: String
+    Description: Prefix name for the resources
+    Default: oswc
+  resourcesBucket:
+    Type: String
+    Description: Resources bucket where the lambda functions is
+  lambdaBucketKey:
+    Type: String
+    Description: Bucket prefix path where the lambda tags functions is stored
+    Default: lambda
+
+Resources:
+  LambdaTagsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ['-', [!Ref prefix, 'lambda-tags-role']]
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [lambda.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+
+  LambdaTags:
+    Type: AWS::Lambda::Function
+    DependsOn: [ LambdaTagsRole ]
+    Properties:
+      FunctionName: !Join ['-', [!Ref prefix, 'lambda-tags'] ]
+      Description: Lambda function that transforms the tags received by parameters
+      Handler: tag-transform.handler
+      Role: !GetAtt LambdaTagsRole.Arn
+      Code:
+        S3Bucket: !Ref resourcesBucket
+        S3Key: !Ref lambdaBucketKey
+      Runtime: "python3.7"
+      Timeout: 30
+      MemorySize: 128
+      ReservedConcurrentExecutions: 1
+  
+  MacroTags:
+      Type: AWS::CloudFormation::Macro
+      DependsOn: [ LambdaTags ]
+      Properties:
+        Name: 'tags'
+        Description: "Add the tags in the resources"
+        FunctionName: !Ref LambdaTags
+
+Outputs:
+  MacroName:
+    Value: !Ref MacroTags
+    Export:
+      Name: !Sub "${AWS::StackName}-macro-name"
